@@ -140,54 +140,24 @@ app.post('/users', async (req, res) => {
 
 app.post('/recipes', async (req, res) => {
     try {
-        const { name, chef_name, email, ingredients, instructions, category } = req.body;
+        const { name, author, ingredients, instructions, category } = req.body;
 
-        if (!name || !chef_name || !email || !ingredients || !instructions || !category){
+        if (!name || !author || !ingredients || !instructions || !category){
             return res.status(400).json({ error: 'Please fill in all fields' });
         }
 
+        const authorID = Number(author);
         const categoryId = Number(category);
-        if (!Number.isInteger(categoryId)) {
-            return res.status(400).json({ error: 'Category must be a number' });
-        }
 
-        const chefName = chef_name.trim();
-        const chefEmail = email.trim().toLowerCase();
-
-        if (!chefEmail.includes('@')){
-            return res.status(400).json({ error: 'Please enter a valid email' });
-        }
-
-        const foundChefByEmail = await pool.query(
-            'SELECT id FROM ratatouille_users WHERE email = $1',
-            [chefEmail]
-        )
-
-        let authorId;
-
-        if (foundChefByEmail.rows.length > 0){
-            authorId = foundChefByEmail.rows[0].id;
-        } else {
-            const nameCheck = await pool.query(
-                'SELECT id FROM ratatouille_users WHERE LOWER(username) = LOWER($1)',
-                [chefName]
-            );
-            if (nameCheck.rows.length > 0){
-                return res.status(409).json({ error: 'That chef name is already used by another email' });
-            }
-
-            const created = await pool.query(
-                'INSERT INTO ratatouille_users (username, email) VALUES ($1, $2) RETURNING id',
-                [chefName, chefEmail]
-            );
-            authorId = created.rows[0].id;
+        if (!Number.isInteger(authorID) || !Number.isInteger(categoryId)) {
+            return res.status(400).json({ error: 'Author & Category must be a number' });
         }
 
         const result = await pool.query(
             `INSERT INTO ratatouille_recipes (name, ingredients, instructions, author, category)
             VALUES ($1, $2, $3, $4, $5)
             RETURNING *`,
-            [name, ingredients, instructions, authorId, categoryId]
+            [name, ingredients, instructions, authorID, categoryId]
         )
         res.status(201).json(result.rows[0]);
 
